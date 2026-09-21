@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppData } from "@/state/AppData";
 import { EQUIPMENT_OPTIONS, EXPERIENCE_OPTIONS, GOAL_OPTIONS } from "@/lib/options";
 import type { Equipment, Experience, Goal, WeightUnit } from "@/lib/types";
-import { BackLink, Button, Card, ErrorNote, Field, Muted, Page, RadioCard, Segmented, Stepper, Title } from "./ui";
+import { BackLink, Button, Card, ErrorNote, Muted, Page, PasswordField, RadioCard, Segmented, Stepper, Title } from "./ui";
 
 export default function Settings({ onBack }: { onBack: () => void }) {
   const { session, updatePassword, signOut } = useAuth();
@@ -97,7 +97,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           </Button>
         ) : (
           <form onSubmit={changePassword} className="flex flex-col gap-2">
-            <Field label="New password" type="password" minLength={6} required autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+            <PasswordField label="New password" minLength={6} required autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
             <div className="flex gap-2">
               <Button type="button" variant="ghost" onClick={() => setShowPw(false)}>
                 Cancel

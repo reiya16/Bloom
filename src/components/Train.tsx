@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppData, type NewSessionSet } from "@/state/AppData";
 import { planForToday } from "@/lib/schedule";
 import { targetsFor, targetText } from "@/lib/suggest";
-import { fmtWeight, unitToKg, weightNumber } from "@/lib/units";
+import { unitToKg, weightNumber } from "@/lib/units";
+import { describeSets } from "@/lib/format";
 import { todayISO, type Exercise, type SessionSet, type WeightUnit, type WorkoutWithItems } from "@/lib/types";
-import { Button, Card, ErrorNote, Muted, Page, RadioCard, Sheet, Tag, Title } from "./ui";
+import { Button, Card, ErrorNote, Muted, Page, RadioCard, Sheet, SwipeToDelete, Tag, Title } from "./ui";
 import ExercisePicker from "./ExercisePicker";
 import CustomExerciseSheet from "./CustomExerciseSheet";
 
@@ -81,11 +82,7 @@ const num = (s: string): number | null => {
 /** "Last time: 60 kg: 8, 8, 7" */
 function lastTimeText(ex: Exercise, last: SessionSet[] | undefined, unit: WeightUnit): string | null {
   if (!last || last.length === 0) return null;
-  if (ex.kind === "time") return `Last time: ${last.map((s) => s.seconds ?? 0).join(", ")} sec`;
-  if (ex.kind === "bodyweight_reps") return `Last time: ${last.map((s) => s.reps ?? 0).join(", ")} reps`;
-  const weights = new Set(last.map((s) => s.weight_kg));
-  if (weights.size === 1) return `Last time: ${fmtWeight(last[0].weight_kg, unit)}: ${last.map((s) => s.reps ?? 0).join(", ")}`;
-  return `Last time: ${last.map((s) => `${fmtWeight(s.weight_kg, unit)} × ${s.reps ?? 0}`).join(", ")}`;
+  return `Last time: ${describeSets(ex, last, unit)}`;
 }
 
 interface Props {
@@ -108,6 +105,31 @@ export default function Train({ startWorkoutId, onStartConsumed, onFinished, onE
   const [summary, setSummary] = useState<{ name: string; sets: number } | null>(null);
 
   useEffect(() => storeDraft(userId, draft), [userId, draft]);
+
+  // a set deleted by mistake can be brought back for a few seconds
+  const [undo, setUndo] = useState<{ key: string; index: number; set: DraftSet } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
+  function removeSet(key: string, index: number) {
+    const set = draft?.exercises.find((x) => x.key === key)?.sets[index];
+    if (!set) return;
+    update(key, (d) => ({ ...d, sets: d.sets.filter((_, j) => j !== index) }));
+    setUndo({ key, index, set });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndo(null), 6000);
+  }
+
+  function undoRemove() {
+    if (!undo) return;
+    const { key, index, set } = undo;
+    update(key, (d) => {
+      const sets = [...d.sets];
+      sets.splice(Math.min(index, sets.length), 0, set);
+      return { ...d, sets };
+    });
+    setUndo(null);
+  }
 
   // "Start workout" on Today opens the workout here
   useEffect(() => {
@@ -270,7 +292,7 @@ export default function Train({ startWorkoutId, onStartConsumed, onFinished, onE
         const open = openKey === x.key;
         const doneCount = x.sets.filter((s) => s.done).length;
         const lastLine = lastTimeText(ex, lastSets.get(x.exerciseId), unit);
-        const kindCols = ex.kind === "weight_reps" ? "grid-cols-[32px_1fr_1fr_44px]" : "grid-cols-[32px_1fr_44px]";
+        const kindCols = ex.kind === "weight_reps" ? "grid-cols-[28px_1fr_1fr_40px_36px]" : "grid-cols-[28px_1fr_40px_36px]";
         return (
           <div key={x.key} className={`rounded-card border bg-surface ${x.skipped ? "border-line opacity-60" : "border-line"}`}>
             <button onClick={() => setOpenKey(open ? null : x.key)} className="flex min-h-[56px] w-full items-center justify-between px-4 text-left" aria-expanded={open}>
@@ -297,12 +319,14 @@ export default function Train({ startWorkoutId, onStartConsumed, onFinished, onE
                   {ex.kind === "weight_reps" && <span>Weight ({unit})</span>}
                   {ex.kind === "time" ? <span>Seconds</span> : <span>Reps</span>}
                   <span />
+                  <span />
                 </div>
                 {x.sets.map((s, i) => {
                   const h = hint(x.exerciseId, i, x);
                   const input = "min-h-[44px] w-full rounded-md2 border border-line-2 bg-bg px-3 text-ink outline-none focus:border-plum placeholder:text-ink-3";
                   return (
-                    <div key={i} className={`grid ${kindCols} items-center gap-x-2.5`}>
+                    <SwipeToDelete key={i} onDelete={() => removeSet(x.key, i)}>
+                    <div className={`grid ${kindCols} items-center gap-x-2`}>
                       <span className="text-[16px] font-bold text-plum">{i + 1}</span>
                       {ex.kind === "weight_reps" && (
                         <input
@@ -357,7 +381,18 @@ export default function Train({ startWorkoutId, onStartConsumed, onFinished, onE
                         }
                         className="mx-auto h-7 w-7 accent-success"
                       />
+                      <button
+                        type="button"
+                        aria-label={`Delete set ${i + 1}`}
+                        onClick={() => removeSet(x.key, i)}
+                        className="flex h-11 w-9 items-center justify-center text-ink-3"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
+                        </svg>
+                      </button>
                     </div>
+                    </SwipeToDelete>
                   );
                 })}
                 <div className="flex items-center gap-2 pt-1">
@@ -387,6 +422,15 @@ export default function Train({ startWorkoutId, onStartConsumed, onFinished, onE
           </div>
         );
       })}
+
+      {undo && (
+        <div role="status" className="sticky bottom-2 z-10 flex items-center justify-between rounded-full bg-plum px-5 py-2 text-[14px] text-bg shadow-lg">
+          <span>Set deleted</span>
+          <button onClick={undoRemove} className="min-h-[44px] px-2 font-bold underline">
+            Undo
+          </button>
+        </div>
+      )}
 
       <button
         onClick={() => setShowAdd(true)}

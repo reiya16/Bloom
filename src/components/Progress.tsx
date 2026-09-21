@@ -3,7 +3,9 @@ import { Line } from "react-chartjs-2";
 import { useAppData } from "@/state/AppData";
 import { kgToUnit } from "@/lib/units";
 import { todayISO } from "@/lib/types";
-import { Card, Chip, Muted, Page, Tag, Title } from "./ui";
+import { parseDay } from "@/lib/format";
+import History from "./History";
+import { Card, Chip, Muted, Page, Segmented, Tag, Title } from "./ui";
 
 interface Point {
   date: string;
@@ -49,6 +51,7 @@ export default function Progress() {
     return { out, order };
   }, [sessions, exerciseById]);
 
+  const [view, setView] = useState<"charts" | "history">("charts");
   const [picked, setPicked] = useState<string | null>(null);
   const exId = picked && history.out.has(picked) ? picked : history.order[0] ?? null;
   const ex = exId ? exerciseById.get(exId) : null;
@@ -95,7 +98,18 @@ export default function Progress() {
   return (
     <Page>
       <Title size={32}>Progress</Title>
+      <Segmented
+        label="Progress view"
+        value={view}
+        onChange={setView}
+        options={[
+          { id: "charts", label: "Charts" },
+          { id: "history", label: "History" }
+        ]}
+      />
+      {view === "history" && <History />}
 
+      {view === "charts" && (<>
       <div className="-mx-5 flex gap-2 overflow-x-auto px-5">
         {history.order.map((id) => (
           <Chip key={id} selected={id === exId} onClick={() => setPicked(id)}>
@@ -121,7 +135,7 @@ export default function Progress() {
             <div className="h-[190px]">
               <Line
                 data={{
-                  labels: points.map((p) => new Date(p.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })),
+                  labels: points.map((p) => parseDay(p.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })),
                   datasets: [
                     {
                       data: points.map((p) => display(p.value)),
@@ -171,6 +185,7 @@ export default function Progress() {
           </div>
         </Card>
       </div>
+      </>)}
     </Page>
   );
 }

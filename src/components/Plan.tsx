@@ -179,6 +179,11 @@ export default function Plan({ onBack, onAddExercises }: Props) {
         </Button>
       </form>
 
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-8 mt-auto border-t border-line bg-bg px-5 pb-4 pt-3">
+        <Button onClick={onBack}>Done</Button>
+        <div className="pt-1.5 text-center text-[12px] text-ink-2">Your changes are saved as you make them.</div>
+      </div>
+
       {editing && <TargetSheet item={editing} onClose={() => setEditing(null)} />}
       {showSchedule && <ScheduleSheet workouts={workouts} onClose={() => setShowSchedule(false)} />}
     </Page>

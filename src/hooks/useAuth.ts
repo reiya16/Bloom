@@ -26,13 +26,6 @@ export function useAuth() {
     if (error) throw error;
   }
 
-  /** Google sign-in. Needs Google switched on in Supabase (Authentication -> Providers). */
-  async function signInWithGoogle() {
-    const redirectTo = window.location.origin + import.meta.env.BASE_URL;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error) throw error;
-  }
-
   async function signUpWithPassword(email: string, password: string) {
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
@@ -63,7 +56,6 @@ export function useAuth() {
     loading,
     isPasswordRecovery,
     signInWithPassword,
-    signInWithGoogle,
     signUpWithPassword,
     sendPasswordReset,
     updatePassword,

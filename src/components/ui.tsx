@@ -1,4 +1,4 @@
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 // ── Small building blocks used across Bloom ─────────────────────────────────
 
@@ -228,5 +228,100 @@ export function ErrorNote({ children }: { children: ReactNode }) {
 export function Page({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div className={`flex h-full flex-col gap-4 overflow-y-auto px-5 pb-8 pt-6 ${className}`}>{children}</div>
+  );
+}
+
+/** Swipe a row to the left to delete it. Vertical scrolling still works as normal. */
+export function SwipeToDelete({ onDelete, children }: { onDelete: () => void; children: ReactNode }) {
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const gesture = useRef<{ x: number; y: number; axis: "h" | "v" | null }>({ x: 0, y: 0, axis: null });
+  const latest = useRef(0);
+  const TRIGGER = 90; // how far to pull before letting go deletes
+
+  function move(v: number) {
+    latest.current = v;
+    setDx(v);
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-md2" style={{ touchAction: "pan-y" }}>
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-end bg-danger px-4 text-[13px] font-bold text-white"
+        style={{ width: Math.max(0, -dx) }}
+        aria-hidden="true"
+      >
+        {-dx > 50 ? "Delete" : ""}
+      </div>
+      <div
+        className="bg-surface"
+        style={{ transform: `translateX(${dx}px)`, transition: dragging ? "none" : "transform 0.18s ease-out" }}
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          gesture.current = { x: t.clientX, y: t.clientY, axis: null };
+        }}
+        onTouchMove={(e) => {
+          const t = e.touches[0];
+          const g = gesture.current;
+          const ddx = t.clientX - g.x;
+          const ddy = t.clientY - g.y;
+          if (g.axis === null && (Math.abs(ddx) > 8 || Math.abs(ddy) > 8)) {
+            g.axis = Math.abs(ddx) > Math.abs(ddy) ? "h" : "v";
+            if (g.axis === "h") setDragging(true);
+          }
+          if (g.axis === "h") move(Math.max(-160, Math.min(0, ddx)));
+        }}
+        onTouchEnd={() => {
+          const shouldDelete = gesture.current.axis === "h" && latest.current <= -TRIGGER;
+          gesture.current.axis = null;
+          setDragging(false);
+          move(0);
+          if (shouldDelete) onDelete();
+        }}
+        onTouchCancel={() => {
+          gesture.current.axis = null;
+          setDragging(false);
+          move(0);
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Password box with a Show / Hide button. */
+export function PasswordField({
+  label,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
+  const [visible, setVisible] = useState(false);
+  const id = `pw-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[14px] font-bold">
+        {label}
+      </label>
+      <div className="flex min-h-[48px] items-center rounded-md2 border border-line-2 bg-surface pl-3.5 focus-within:border-plum">
+        <input
+          id={id}
+          {...props}
+          type={visible ? "text" : "password"}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-pressed={visible}
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          className="flex min-h-[48px] min-w-[64px] items-center justify-center px-3 text-[14px] font-bold text-plum"
+        >
+          {visible ? "Hide" : "Show"}
+        </button>
+      </div>
+    </div>
   );
 }

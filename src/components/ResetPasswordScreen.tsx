@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button, ErrorNote, Field, Muted, Page, Title } from "./ui";
+import { Button, ErrorNote, Muted, Page, PasswordField, Title } from "./ui";
 
 /** Shown after someone taps the link in a "reset password" email. */
 export default function ResetPasswordScreen() {
@@ -43,8 +43,8 @@ export default function ResetPasswordScreen() {
     <Page className="justify-center">
       <Title>Choose a new password</Title>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-        <Field label="New password" type="password" required minLength={6} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <Field label="Confirm new password" type="password" required minLength={6} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <PasswordField label="New password" required minLength={6} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField label="Confirm new password" required minLength={6} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {error && <ErrorNote>{error}</ErrorNote>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving..." : "Save password"}

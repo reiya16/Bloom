@@ -4,15 +4,16 @@ Training and nutrition, coached to your goals. A mobile-first web app (installab
 home screen) built with React + TypeScript + Vite + Tailwind, backed by Supabase, deployed
 to GitHub Pages.
 
-## What's in this version (v0.2)
+## What's in this version (v0.4)
 
-- Sign in with Google or email + password (each person gets their own private data)
+- Sign in with email + password, with a Show / Hide button on password boxes (each person gets their own private data)
 - First-time setup: goal, where you train, optional nutrition targets, a suggested plan
 - Suggested plans come from simple rules (goal + days per week + experience + equipment), not AI
 - My plan: any split (push/pull/legs, upper/lower, full body, your own), exercises picked by
   muscle group, your own custom exercises, fixed / rotation / flexible scheduling
-- Train: every set logged separately, "last time" hints, add an exercise for today only or every time
-- Progress: per-exercise chart and a flat-for-3-sessions flag
+- Train: every set logged separately, "last time" hints, add an exercise for today only or every time,
+  delete a set (button or swipe left, with Undo)
+- Progress: per-exercise chart, a flat-for-3-sessions flag, and a History log (by date or by exercise)
 
 Coming next: Coach (stall alerts, plan changes you approve), Eat (calories, protein, carbs, fat),
 Apple Health sync via an iPhone Shortcut.
@@ -25,19 +26,7 @@ Apple Health sync via an iPhone Shortcut.
 3. **Project Settings → API**: copy the Project URL and the `anon` `public` key.
 4. **Authentication → URL Configuration**: set **Site URL** and add a **Redirect URL** of
    `https://<your-github-username>.github.io/gym-tracker-v2/`.
-5. **Authentication → Sign In / Providers**: Email is on by default. To add Google, see below.
-
-### Google sign-in (optional)
-
-1. In [Google Cloud Console](https://console.cloud.google.com), create a project, then set up the
-   OAuth consent screen (External; app name Bloom; your email).
-2. Create an **OAuth client ID** of type **Web application**.
-   - Authorized JavaScript origin: `https://<your-github-username>.github.io`
-   - Authorized redirect URI: the **Callback URL** shown on Supabase's Google provider page
-     (looks like `https://<project-ref>.supabase.co/auth/v1/callback`)
-3. Copy the Client ID and Client Secret into Supabase → Authentication → Sign In / Providers → Google,
-   switch it on and save.
-4. In the Google consent screen settings, publish the app (or add friends as test users) so they can sign in.
+5. **Authentication → Sign In / Providers**: Email is on by default.
 
 ## Deploy (GitHub Pages)
 

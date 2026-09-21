@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button, ErrorNote } from "./ui";
+import { Button, ErrorNote, PasswordField } from "./ui";
 
 type Mode = "signin" | "signup" | "forgot";
 
 export default function Welcome() {
-  const { signInWithPassword, signUpWithPassword, signInWithGoogle, sendPasswordReset } = useAuth();
+  const { signInWithPassword, signUpWithPassword, sendPasswordReset } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,37 +40,12 @@ export default function Welcome() {
     }
   }
 
-  async function google() {
-    reset();
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in isn't available yet.");
-    }
-  }
-
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto px-6 pb-8 pt-[12dvh]">
       <div className="flex flex-col gap-2.5">
         <h1 className="font-display text-[46px] leading-none text-plum">Bloom</h1>
         <p className="text-[17px] leading-snug text-ink-2">Training and nutrition, coached to your goals.</p>
       </div>
-
-      {mode !== "forgot" && (
-        <>
-          <button
-            onClick={google}
-            className="flex min-h-[52px] items-center justify-center rounded-full border border-line-2 bg-surface text-[16px] font-bold"
-          >
-            Continue with Google
-          </button>
-          <div className="flex items-center gap-3 text-[13px] text-ink-2">
-            <span className="h-px flex-1 bg-line-2" />
-            or use email
-            <span className="h-px flex-1 bg-line-2" />
-          </div>
-        </>
-      )}
 
       <form onSubmit={submit} className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-1.5">
@@ -90,22 +65,15 @@ export default function Welcome() {
         </div>
 
         {mode !== "forgot" && (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-[14px] font-bold">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              className="min-h-[48px] rounded-md2 border border-line-2 bg-surface px-3.5 text-ink outline-none focus:border-plum"
-            />
-          </div>
+          <PasswordField
+            label="Password"
+            required
+            minLength={6}
+            placeholder="At least 6 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          />
         )}
 
         {mode === "signin" && (
