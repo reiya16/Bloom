@@ -2,50 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Plum & Coral theme ──────────────────────────────────────────────────────
-   Neutrals (backgrounds, surfaces, text, lines) flip between light and dark
-   based on the system's color scheme preference. Brand colors (accent/coral,
-   danger, warn) stay constant across both themes — only the canvas around
-   them changes, which keeps the app feeling consistent either way. */
+/* ── Bloom theme: plum and coral ─────────────────────────────────────────────
+   Neutrals flip between light and dark with the phone's setting. Brand colors
+   stay recognisable in both. */
 :root {
-  /* Neutrals — light mode (default) */
-  --bg: 250 246 248;
+  --bg: 251 247 244;
   --surface: 255 255 255;
-  --surface-2: 243 236 241;
-  --surface-3: 236 227 234;
-  --surface-4: 226 214 223;
-  --line: rgba(20, 10, 20, 0.08);
-  --line-2: rgba(20, 10, 20, 0.14);
-  --line-3: rgba(20, 10, 20, 0.22);
-  --ink: 34 26 38;
-  --ink-2: 107 94 112;
-  --ink-3: 156 143 161;
+  --surface-2: 241 230 240;   /* soft plum tint */
+  --surface-3: 240 230 226;
+  --surface-4: 234 223 219;
+  --line: #EADFDB;
+  --line-2: #E0D2CD;
+  --line-3: #CDBCC6;
+  --ink: 42 26 41;
+  --ink-2: 107 90 105;
+  --ink-3: 140 124 138;
   --ink-4: 199 187 204;
 
-  /* Brand — constant across themes */
-  --accent: 232 131 107;
-  --accent-bg: rgba(232, 131, 107, 0.14);
-  --accent-border: rgba(232, 131, 107, 0.38);
-  --danger: 214 69 63;
-  --danger-bg: rgba(214, 69, 63, 0.1);
-  --warn: 201 138 53;
-  --warn-bg: rgba(201, 138, 53, 0.12);
+  --plum: 75 31 74;
+  --plum-bg: 241 230 240;
+
+  --accent: 200 69 47;          /* coral, used for main buttons (white text) */
+  --accent-ink: 255 255 255;
+  --accent-bg: #FBE6E0;
+  --accent-border: rgba(200, 69, 47, 0.38);
+
+  --success: 47 122 85;
+  --success-bg: #E4F1EA;
+  --danger: 190 50 50;
+  --danger-bg: rgba(190, 50, 50, 0.1);
+  --warn: 168 110 30;
+  --warn-bg: rgba(201, 138, 53, 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: 24 20 32;
     --surface: 32 26 41;
-    --surface-2: 40 31 51;
-    --surface-3: 49 39 62;
+    --surface-2: 49 39 62;
+    --surface-3: 40 31 51;
     --surface-4: 59 47 74;
-    --line: rgba(255, 255, 255, 0.07);
-    --line-2: rgba(255, 255, 255, 0.12);
-    --line-3: rgba(255, 255, 255, 0.2);
+    --line: rgba(255, 255, 255, 0.09);
+    --line-2: rgba(255, 255, 255, 0.14);
+    --line-3: rgba(255, 255, 255, 0.22);
     --ink: 241 236 244;
     --ink-2: 182 169 188;
-    --ink-3: 124 111 132;
+    --ink-3: 140 127 148;
     --ink-4: 78 68 88;
+
+    --plum: 226 190 224;
+    --plum-bg: 49 39 62;
+    --accent-bg: rgba(200, 69, 47, 0.2);
+    --success: 110 190 150;
+    --success-bg: rgba(47, 122, 85, 0.25);
+    --danger: 235 110 105;
+    --warn: 226 170 90;
   }
 }
 
@@ -54,9 +65,16 @@ html, body, #root {
   height: 100dvh;
 }
 
+/* leave room for the phone's status bar / notch when installed on the home screen */
+#root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 
 ::-webkit-scrollbar {
@@ -64,8 +82,6 @@ body {
   height: 0;
 }
 
-/* Remove the up/down stepper arrows on number inputs across the app —
-   weight/reps/sets fields look cleaner as plain numeric text fields. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -74,4 +90,9 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* keep iOS from zooming when an input is focused */
+input, select, textarea {
+  font-size: 16px;
 }

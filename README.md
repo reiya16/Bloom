@@ -1,109 +1,62 @@
-# Lift Log
+# Bloom
 
-A progressive-overload workout tracker with proactive AI coaching, built with
-React + TypeScript + Vite + Tailwind, backed by Supabase, deployed to GitHub Pages.
+Training and nutrition, coached to your goals. A mobile-first web app (installable to the
+home screen) built with React + TypeScript + Vite + Tailwind, backed by Supabase, deployed
+to GitHub Pages.
 
-## Architecture
+## What's in this version (v0.2)
 
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Charts**: react-chartjs-2 (wraps Chart.js)
-- **Data**: Supabase (Postgres + Auth + Row Level Security)
-- **AI proxy**: Supabase Edge Function (Deno) — holds the Gemini API key
-  server-side so it's never exposed in the browser
-- **Hosting**: GitHub Pages, auto-deployed via GitHub Actions on every push to `main`
-- **PWA**: vite-plugin-pwa for installable, offline-capable app behavior
+- Sign in with Google or email + password (each person gets their own private data)
+- First-time setup: goal, where you train, optional nutrition targets, a suggested plan
+- Suggested plans come from simple rules (goal + days per week + experience + equipment), not AI
+- My plan: any split (push/pull/legs, upper/lower, full body, your own), exercises picked by
+  muscle group, your own custom exercises, fixed / rotation / flexible scheduling
+- Train: every set logged separately, "last time" hints, add an exercise for today only or every time
+- Progress: per-exercise chart and a flat-for-3-sessions flag
 
-## 1. Supabase setup
+Coming next: Coach (stall alerts, plan changes you approve), Eat (calories, protein, carbs, fat),
+Apple Health sync via an iPhone Shortcut.
 
-1. Create a free project at [supabase.com](https://supabase.com)
-2. Go to **SQL Editor** → paste the contents of `supabase/migrations/0001_init.sql` → Run
-3. Go to **Settings → API** and copy:
-   - Project URL → `VITE_SUPABASE_URL`
-   - `anon` `public` key → `VITE_SUPABASE_ANON_KEY`
-4. Go to **Authentication → Providers** and make sure **Email** is enabled
-   (magic link sign-in is used by default in `useAuth.ts`)
+## Supabase setup
 
-## 2. Edge Function setup (AI Coach)
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **SQL Editor** → New query → paste `supabase/migrations/0002_bloom_foundation.sql` → Run.
+   (This removes the old Lift Log tables. Your sign-in accounts are not affected.)
+3. **Project Settings → API**: copy the Project URL and the `anon` `public` key.
+4. **Authentication → URL Configuration**: set **Site URL** and add a **Redirect URL** of
+   `https://<your-github-username>.github.io/gym-tracker-v2/`.
+5. **Authentication → Sign In / Providers**: Email is on by default. To add Google, see below.
 
-Install the Supabase CLI if you haven't:
+### Google sign-in (optional)
 
-```bash
-npm install -g supabase
-supabase login
-supabase link --project-ref your-project-ref
-```
+1. In [Google Cloud Console](https://console.cloud.google.com), create a project, then set up the
+   OAuth consent screen (External; app name Bloom; your email).
+2. Create an **OAuth client ID** of type **Web application**.
+   - Authorized JavaScript origin: `https://<your-github-username>.github.io`
+   - Authorized redirect URI: the **Callback URL** shown on Supabase's Google provider page
+     (looks like `https://<project-ref>.supabase.co/auth/v1/callback`)
+3. Copy the Client ID and Client Secret into Supabase → Authentication → Sign In / Providers → Google,
+   switch it on and save.
+4. In the Google consent screen settings, publish the app (or add friends as test users) so they can sign in.
 
-Set your Gemini key as a server-side secret (get a free key at
-[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)):
+## Deploy (GitHub Pages)
 
-```bash
-supabase secrets set GEMINI_API_KEY=your-gemini-key-here
-```
+Add two repository secrets (**Settings → Secrets and variables → Actions**):
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. In **Settings → Pages**, set Source to
+**GitHub Actions**. Every push to `main` builds and deploys via `.github/workflows/deploy.yml`.
 
-Deploy the function:
-
-```bash
-supabase functions deploy ai-coach
-```
-
-The function automatically has access to `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` — Supabase injects these for you, no extra setup needed.
-
-## 3. Local development
+## Local development
 
 ```bash
-cp .env.example .env.local
-# fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local
-
+cp .env.example .env.local   # fill in the two Supabase values
 npm install
 npm run dev
+npm run typecheck            # optional type check
 ```
 
-## 4. Seed your workouts
+## Notes
 
-After signing in once (so a row exists in `auth.users`), either:
-- Use the in-app "Manage workouts" panel (gear icon) to add your workouts and exercises, or
-- Run the commented insert statements at the bottom of `0001_init.sql` with your actual user id
-
-## 5. Deploy to GitHub Pages
-
-1. Push this repo to GitHub
-2. In **Settings → Pages**, set Source to **GitHub Actions**
-3. In **Settings → Secrets and variables → Actions**, add two repository secrets:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. Edit `vite.config.ts` — change `base: "/lift-log/"` to match your actual repo name
-5. Push to `main` — the workflow in `.github/workflows/deploy.yml` builds and deploys automatically
-
-Your app will be live at `https://<your-username>.github.io/<repo-name>/`
-
-## 6. PWA icons
-
-Add `icon-192.png` and `icon-512.png` (square, your app logo) to the `public/`
-folder before deploying — referenced by `vite.config.ts`'s PWA manifest.
-
-## What's fully implemented
-
-- Auth (magic link)
-- Workouts CRUD (add/rename/delete) with inline confirmation UI (no native `confirm()`/`prompt()`)
-- Exercises CRUD per workout
-- Entry logging with baseline (last session) comparison and trend display
-- Stagnation detection (no volume improvement across last 4 sessions)
-- Rotation-based "suggested next workout" (no calendar lock-in)
-- AI Coach chat with proactive auto-analysis on open, server-side key, full workout context
-- **History tab**: List view (per-exercise recent entries) and **Calendar view**
-  (month grid with colored dots per workout, tap a day for full detail)
-- **Muscle group / volume breakdown** donut chart with All-time / Last-4-weeks toggle
-- **Per-exercise progress chart** (Line, via react-chartjs-2) inside each exercise's
-  expandable history panel
-- GitHub Actions CI/CD to Pages
-
-## Possible next steps
-
-- Code-split Chart.js with `React.lazy()` if bundle size matters to you — it's the
-  largest contributor to the current ~170KB gzipped bundle
-- Add a "compare exercises" chart (overlay 2+ exercises on one Line chart) — the
-  `useWorkouts` hook already exposes everything needed per exercise
-- Push notifications / reminders to log a workout, via a Supabase scheduled function
-- Multi-user support if you ever want to share this with training partners (the
-  RLS policies already isolate each user's data, so this is mostly a UI question)
+- Weights are stored in kg and shown in kg or lb per person's choice.
+- Removing an exercise from a plan archives it (history is kept), it is never hard-deleted.
+- `supabase/functions/ai-coach` is the old Lift Log coach function. It is not used by this version
+  and will be replaced when Coach is built.

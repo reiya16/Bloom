@@ -1,61 +1,59 @@
-interface Props {
-  active: string;
-  onChange: (tab: string) => void;
-}
+export type TabId = "today" | "train" | "eat" | "progress" | "coach";
 
-const TABS = [
+const TABS: { id: TabId; label: string; icon: JSX.Element }[] = [
   {
-    id: "workout",
-    label: "Workout",
+    id: "today",
+    label: "Today",
     icon: (
       <>
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M3 10h18M8 3v4M16 3v4" />
+      </>
+    )
+  },
+  { id: "train", label: "Train", icon: <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /> },
+  {
+    id: "eat",
+    label: "Eat",
+    icon: (
+      <>
+        <path d="M12 7c-2-2-6-1.5-6 3 0 4 3 9 6 9s6-5 6-9c0-4.5-4-5-6-3z" />
+        <path d="M12 7c0-2 1-3 3-4" />
       </>
     )
   },
   {
-    id: "history",
-    label: "History",
-    icon: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-  },
-  {
-    id: "ai",
-    label: "AI Coach",
+    id: "progress",
+    label: "Progress",
     icon: (
       <>
-        <path d="M12 2a10 10 0 110 20A10 10 0 0112 2z" />
-        <path d="M12 16v-4M12 8h.01" />
+        <path d="M3 17l6-6 4 4 8-8" />
+        <path d="M15 7h6v6" />
       </>
     )
   },
-  {
-    id: "profile",
-    label: "Profile",
-    icon: (
-      <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
-      </>
-    )
-  }
+  { id: "coach", label: "Coach", icon: <path d="M4 5h16v11H9l-5 4z" /> }
 ];
 
-export default function TabBar({ active, onChange }: Props) {
+export default function TabBar({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
   return (
-    <div className="flex flex-shrink-0 border-t border-line bg-bg/95 px-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
-      {TABS.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={`flex flex-1 flex-col items-center gap-0.5 py-1 ${active === tab.id ? "text-accent" : "text-ink-3"}`}
-        >
-          <svg viewBox="0 0 24 24" className="h-[22px] w-[22px] fill-none stroke-current" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            {tab.icon}
-          </svg>
-          <span className="text-[10px] font-medium tracking-wide">{tab.label}</span>
-        </button>
-      ))}
-    </div>
+    <nav aria-label="Main" className="flex border-t border-line bg-surface px-2 pt-1.5" style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}>
+      {TABS.map((t) => {
+        const on = t.id === active;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            aria-current={on ? "page" : undefined}
+            className={`flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 text-[12px] ${on ? "font-bold text-plum" : "font-medium text-ink-2"}`}
+          >
+            <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {t.icon}
+            </svg>
+            {t.label}
+          </button>
+        );
+      })}
+    </nav>
   );
 }

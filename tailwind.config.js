@@ -3,6 +3,10 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"DM Sans"', "system-ui", "sans-serif"],
+        display: ["Fraunces", "Georgia", "serif"]
+      },
       colors: {
         bg: "rgb(var(--bg) / <alpha-value>)",
         surface: {
@@ -22,10 +26,19 @@ export default {
           3: "rgb(var(--ink-3) / <alpha-value>)",
           4: "rgb(var(--ink-4) / <alpha-value>)"
         },
+        plum: {
+          DEFAULT: "rgb(var(--plum) / <alpha-value>)",
+          bg: "rgb(var(--plum-bg) / <alpha-value>)"
+        },
         accent: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           bg: "var(--accent-bg)",
-          border: "var(--accent-border)"
+          border: "var(--accent-border)",
+          ink: "rgb(var(--accent-ink) / <alpha-value>)"
+        },
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          bg: "var(--success-bg)"
         },
         danger: {
           DEFAULT: "rgb(var(--danger) / <alpha-value>)",
@@ -37,9 +50,9 @@ export default {
         }
       },
       borderRadius: {
-        card: "14px",
-        md2: "9px",
-        sm2: "6px"
+        card: "16px",
+        md2: "14px",
+        sm2: "8px"
       }
     }
   },
