@@ -4,7 +4,7 @@ Training and nutrition, coached to your goals. A mobile-first web app (installab
 home screen) built with React + TypeScript + Vite + Tailwind, backed by Supabase, deployed
 to GitHub Pages.
 
-## What's in this version (v0.5)
+## What's in this version (v0.5.1)
 
 - Sign in with email + password, with a Show / Hide button on password boxes (each person gets their own private data)
 - First-time setup: goal, where you train, optional nutrition targets, a suggested plan
@@ -31,7 +31,7 @@ Coming next: Apple Health sync via an iPhone Shortcut.
    (This removes the old Lift Log tables. Your sign-in accounts are not affected.)
 3. **Project Settings → API**: copy the Project URL and the `anon` `public` key.
 4. **Authentication → URL Configuration**: set **Site URL** and add a **Redirect URL** of
-   `https://<your-github-username>.github.io/gym-tracker-v2/`.
+   `https://<your-github-username>.github.io/<your-repo-name>/` (the address of your live site).
 5. **Authentication → Sign In / Providers**: Email is on by default.
 
 ### Coach and Eat (server functions)
