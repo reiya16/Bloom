@@ -3,8 +3,10 @@ import { useAppData } from "@/state/AppData";
 import { EQUIPMENT_OPTIONS, EXPERIENCE_OPTIONS, GOAL_OPTIONS, GOAL_TITLE, SCHEDULE_OPTIONS } from "@/lib/options";
 import { buildPlan, suggestTemplate, TEMPLATE_OPTIONS, type PlanInputs, type TemplateId } from "@/lib/suggest";
 import { defaultUnit, unitToKg } from "@/lib/units";
+import { suggestNutrition } from "@/lib/nutrition";
 import type { Equipment, Experience, Goal, ScheduleMode, WeightUnit } from "@/lib/types";
 import { BackLink, Button, Card, ErrorNote, Eyebrow, Field, Muted, Page, RadioCard, Segmented, Stepper, Tag, Title } from "../ui";
+import ChatPanel from "../ChatPanel";
 
 type Step = "goal" | "where" | "nutrition" | "suggest" | "other" | "chat";
 
@@ -14,17 +16,6 @@ const EQUIPMENT_TITLE: Record<Equipment, string> = {
   bodyweight: "Bodyweight only",
   mix: "A mix"
 };
-
-/** Rough starting numbers from body weight and goal. General estimates only. */
-function suggestNutrition(kg: number, goal: Goal | null): { calories: number; protein: number } {
-  const proteinPerKg = goal === "lose_fat" ? 2.0 : goal === "stay_fit" ? 1.4 : 1.8;
-  const maintenance = kg * 33;
-  const factor = goal === "build_muscle" ? 1.1 : goal === "lose_fat" ? 0.8 : 1;
-  return {
-    calories: Math.round((maintenance * factor) / 50) * 50,
-    protein: Math.round(proteinPerKg * kg)
-  };
-}
 
 export default function Onboarding({ onFinish }: { onFinish: (openPlan: boolean) => void }) {
   const { profile, saveProfile, exercises, createPlanFromDraft } = useAppData();
@@ -315,19 +306,29 @@ export default function Onboarding({ onFinish }: { onFinish: (openPlan: boolean)
     );
   }
 
-  // ── talk to coach (coming later) ───────────────────────────────────────────
+  // ── talk to coach: describe your routine in your own words ─────────────────
   return (
-    <Page>
-      <BackLink label="Back" onClick={() => setStep("suggest")} />
-      <Title>Talk to Coach</Title>
-      <Card className="flex flex-col gap-2">
-        <div className="text-[15px] font-bold">Coming in a later update</div>
-        <Muted>
-          Soon you&apos;ll be able to describe your routine in your own words and Coach will draft it for you. For now, pick the closest starting
-          point and edit it in My plan.
-        </Muted>
-      </Card>
-      <Button onClick={() => setStep("other")}>Choose a starting point</Button>
-    </Page>
+    <div className="flex h-full flex-col">
+      <div className="flex flex-col gap-1 px-5 pt-5">
+        <BackLink label="Back" onClick={() => setStep("suggest")} />
+        <Title>Talk to Coach</Title>
+        <Muted className="text-[14px]">Describe your routine in your own words. Coach drafts a plan and you decide whether to use it.</Muted>
+      </div>
+      <ChatPanel
+        thread="plan_setup"
+        intro="Tell me how you like to train: which days, which muscles, any exercises you love or hate. I'll draft your plan. What you type is shared with Google's Gemini AI to write the reply."
+        suggestions={["I train Mon, Wed, Fri: push, pull, legs", "Full body twice a week, dumbbells only", "I do a 4-day upper/lower split"]}
+        placeholder="Describe your routine"
+        onApplied={() => {
+          onFinish(true);
+          void saveProfile({ onboarding_done: true });
+        }}
+      />
+      <div className="border-t border-line px-5 py-1">
+        <Button variant="ghost" onClick={() => setStep("other")}>
+          Choose a starting point instead
+        </Button>
+      </div>
+    </div>
   );
 }

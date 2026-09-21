@@ -1,18 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import type {
+  Change,
   Exercise,
+  FoodEntry,
   ExerciseEquipment,
   ExerciseKind,
   MuscleGroup,
   PlanItem,
   Profile,
+  Proposal,
   ScheduleMode,
   Session,
   SessionSet,
   WorkoutWithItems
 } from "@/lib/types";
-import { targetsFor, type PlanDraft } from "@/lib/suggest";
+import { targetsFor, type PlanDraft, type PlannedWorkout } from "@/lib/suggest";
 
 export interface SessionWithSets extends Session {
   sets: SessionSet[];
@@ -26,6 +29,8 @@ export interface NewSessionSet {
   seconds: number | null;
   is_extra: boolean;
 }
+
+export type NewFood = Omit<FoodEntry, "id" | "user_id">;
 
 export interface NewExercise {
   name: string;
@@ -45,6 +50,12 @@ interface AppData {
   sessions: SessionWithSets[];
   /** The most recent logged sets for each exercise (for "last time"). */
   lastSets: Map<string, SessionSet[]>;
+  /** Food eaten in the last ~5 weeks, newest first. */
+  foodLog: FoodEntry[];
+  addFood: (entry: NewFood) => Promise<void>;
+  deleteFood: (id: string) => Promise<void>;
+  /** Applies a Coach proposal. Only ever called when the person taps Apply. */
+  applyProposal: (p: Proposal) => Promise<{ applied: string[]; skipped: string[] }>;
   refresh: () => Promise<void>;
   saveProfile: (patch: Partial<Omit<Profile, "user_id">>) => Promise<void>;
   createPlanFromDraft: (draft: PlanDraft) => Promise<void>;
@@ -87,9 +98,13 @@ export function AppDataProvider({ userId, children }: { userId: string; children
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutWithItems[]>([]);
   const [sessions, setSessions] = useState<SessionWithSets[]>([]);
+  const [foodLog, setFoodLog] = useState<FoodEntry[]>([]);
 
   const load = useCallback(async () => {
-    const [p, ex, wk, se] = await Promise.all([
+    const since = new Date();
+    since.setDate(since.getDate() - 35);
+    const sinceISO = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
+    const [p, ex, wk, se, fd] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("exercises").select("*"),
       supabase.from("workouts").select("*, workout_exercises(*)").eq("user_id", userId).order("sort_order"),
@@ -99,8 +114,15 @@ export function AppDataProvider({ userId, children }: { userId: string; children
         .eq("user_id", userId)
         .order("date", { ascending: false })
         .order("started_at", { ascending: false })
-        .limit(150)
+        .limit(150),
+      supabase
+        .from("food_log")
+        .select("*")
+        .gte("date", sinceISO)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
     ]);
+    fail(fd.error);
     fail(p.error);
     fail(ex.error);
     fail(wk.error);
@@ -129,6 +151,17 @@ export function AppDataProvider({ userId, children }: { userId: string; children
       return { ...rest, sets } as SessionWithSets;
     });
 
+    const foodList: FoodEntry[] = (fd.data ?? []).map((f: any) => ({
+      ...f,
+      grams: f.grams == null ? null : Number(f.grams),
+      fdc_id: f.fdc_id == null ? null : Number(f.fdc_id),
+      calories: Number(f.calories),
+      protein_g: Number(f.protein_g),
+      carbs_g: Number(f.carbs_g),
+      fat_g: Number(f.fat_g)
+    }));
+
+    setFoodLog(foodList);
     setProfile(prof);
     setExercises(exList);
     setWorkouts(wkList);
@@ -288,6 +321,94 @@ export function AppDataProvider({ userId, children }: { userId: string; children
     await refresh();
   };
 
+  const addFood: AppData["addFood"] = async (entry) => {
+    fail((await supabase.from("food_log").insert({ ...entry, user_id: userId })).error);
+    await refresh();
+  };
+
+  const deleteFood: AppData["deleteFood"] = async (id) => {
+    fail((await supabase.from("food_log").delete().eq("id", id)).error);
+    await refresh();
+  };
+
+  const applyProposal: AppData["applyProposal"] = async (proposal) => {
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const byName = new Map(exercises.filter((e) => !e.archived).map((e) => [e.name.toLowerCase(), e]));
+    // a working copy of the plan, so several changes in one proposal build on each other
+    const plan = new Map(
+      workouts.map((w) => [w.name.toLowerCase(), { id: w.id, name: w.name, items: new Map(w.items.map((i) => [i.exercise_id, i])), next: Math.max(-1, ...w.items.map((i) => i.sort_order)) + 1 }])
+    );
+    const targetFor = (e: Exercise, c: { sets?: number; reps?: number; seconds?: number }) => {
+      const d = targetsFor(e, profile?.goal ?? null, profile?.experience ?? null);
+      const timed = e.kind === "time";
+      return { target_sets: c.sets ?? d.sets, target_reps: timed ? null : c.reps ?? d.reps, target_seconds: timed ? c.seconds ?? d.seconds : null };
+    };
+    const hasReplace = proposal.changes.some((c) => c.op === "replace_plan");
+
+    for (const c of proposal.changes as Change[]) {
+      if (c.op === "replace_plan") {
+        const draftWorkouts: PlannedWorkout[] = c.workouts.map((w) => ({
+          name: w.name,
+          focus: "",
+          weekdays: null,
+          items: w.exercises
+            .map((x) => {
+              const e = byName.get(x.exercise.toLowerCase());
+              if (!e) return null;
+              const t = targetFor(e, x);
+              return { exercise: e, sets: t.target_sets, reps: t.target_reps, seconds: t.target_seconds };
+            })
+            .filter((x): x is NonNullable<typeof x> => !!x)
+        }));
+        const usable = draftWorkouts.filter((w) => w.items.length > 0);
+        if (usable.length === 0) {
+          skipped.push("The new plan (none of its exercises could be matched)");
+          continue;
+        }
+        await createPlanFromDraft({ templateId: "custom", title: "Coach plan", why: "", workouts: usable });
+        applied.push(`New plan with ${usable.length} ${usable.length === 1 ? "workout" : "workouts"}`);
+        continue;
+      }
+      if (c.op === "set_nutrition") {
+        await saveProfile({
+          ...(c.calories ? { calorie_target: c.calories } : {}),
+          ...(c.protein_g ? { protein_target_g: c.protein_g } : {})
+        });
+        applied.push("Daily nutrition goal updated");
+        continue;
+      }
+      if (hasReplace) continue; // a whole new plan already covers the smaller edits
+      const w = plan.get(c.workout.toLowerCase());
+      const e = byName.get(c.exercise.toLowerCase());
+      if (!w || !e) {
+        skipped.push(`${c.exercise} (couldn't find it in ${c.workout})`);
+        continue;
+      }
+      const item = w.items.get(e.id);
+      if (c.op === "set_target") {
+        if (!item) { skipped.push(`${e.name} isn't in ${w.name}`); continue; }
+        const t = targetFor(e, c);
+        fail((await supabase.from("workout_exercises").update(t).eq("id", item.id)).error);
+        applied.push(`${e.name}: new target in ${w.name}`);
+      } else if (c.op === "remove_exercise") {
+        if (!item) { skipped.push(`${e.name} isn't in ${w.name}`); continue; }
+        fail((await supabase.from("workout_exercises").update({ archived: true }).eq("id", item.id)).error);
+        w.items.delete(e.id);
+        applied.push(`Removed ${e.name} from ${w.name}`);
+      } else if (c.op === "add_exercise") {
+        if (item) { skipped.push(`${e.name} is already in ${w.name}`); continue; }
+        const t = targetFor(e, c);
+        const ins = await supabase.from("workout_exercises").insert({ workout_id: w.id, exercise_id: e.id, sort_order: w.next++, ...t }).select("*").single();
+        fail(ins.error);
+        w.items.set(e.id, ins.data as PlanItem);
+        applied.push(`Added ${e.name} to ${w.name}`);
+      }
+    }
+    await refresh();
+    return { applied, skipped };
+  };
+
   const value: AppData = {
     userId,
     loading,
@@ -298,6 +419,10 @@ export function AppDataProvider({ userId, children }: { userId: string; children
     workouts,
     sessions,
     lastSets,
+    foodLog,
+    addFood,
+    deleteFood,
+    applyProposal,
     refresh,
     saveProfile,
     createPlanFromDraft,

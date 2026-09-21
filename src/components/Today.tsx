@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useAppData } from "@/state/AppData";
 import { currentWeek, planForToday } from "@/lib/schedule";
+import { computeAlerts } from "@/lib/coachRules";
 import { targetText } from "@/lib/suggest";
 import { GOAL_TITLE } from "@/lib/options";
 import { todayISO } from "@/lib/types";
@@ -11,10 +12,12 @@ interface Props {
   onEditPlan: () => void;
   onOpenSettings: () => void;
   onChooseWorkout: () => void;
+  onAskCoach: (text: string) => void;
 }
 
-export default function Today({ onStart, onEditPlan, onOpenSettings, onChooseWorkout }: Props) {
-  const { workouts, sessions, profile } = useAppData();
+export default function Today({ onStart, onEditPlan, onOpenSettings, onChooseWorkout, onAskCoach }: Props) {
+  const { workouts, sessions, profile, foodLog, exerciseById } = useAppData();
+  const nudge = useMemo(() => computeAlerts({ sessions, exerciseById, profile, foodLog })[0] ?? null, [sessions, exerciseById, profile, foodLog]);
   const plan = useMemo(() => planForToday(workouts, sessions, profile), [workouts, sessions, profile]);
   const week = useMemo(() => currentWeek(workouts, sessions, profile), [workouts, sessions, profile]);
   const doneToday = sessions.some((s) => s.date === todayISO());
@@ -81,6 +84,19 @@ export default function Today({ onStart, onEditPlan, onOpenSettings, onChooseWor
           ))}
         </div>
       </div>
+
+      {nudge && (
+        <Card className="flex flex-col gap-1 !p-3.5">
+          <div className="flex items-center gap-2">
+            <Tag tone={nudge.kind === "stall" ? "accent" : "warn"}>Coach</Tag>
+            <span className="text-[14px] font-bold leading-snug">{nudge.title}</span>
+          </div>
+          <div className="text-[13px] leading-snug text-ink-2">{nudge.detail}</div>
+          <button onClick={() => onAskCoach(nudge.ask)} className="min-h-[44px] self-start text-[14px] font-bold text-plum">
+            Ask Coach
+          </button>
+        </Card>
+      )}
 
       {workouts.length === 0 ? (
         <Card className="flex flex-col gap-2">

@@ -11,7 +11,8 @@ import Plan from "@/components/Plan";
 import Library from "@/components/Library";
 import Progress from "@/components/Progress";
 import Settings from "@/components/Settings";
-import ComingSoon from "@/components/ComingSoon";
+import Eat from "@/components/Eat";
+import Coach from "@/components/Coach";
 import { Button, Card, Muted, Page, Spinner, Title } from "@/components/ui";
 
 type Overlay = { type: "plan" } | { type: "library"; workoutId: string } | { type: "settings" } | null;
@@ -63,6 +64,14 @@ function MainApp({ startOnPlan }: { startOnPlan: boolean }) {
   const [tab, setTab] = useState<TabId>("today");
   const [overlay, setOverlay] = useState<Overlay>(startOnPlan ? { type: "plan" } : null);
   const [startWorkoutId, setStartWorkoutId] = useState<string | null>(null);
+  const [coachPrompt, setCoachPrompt] = useState<{ id: number; text: string } | null>(null);
+
+  /** "Ask Coach" buttons anywhere in the app: open Coach and send the question. */
+  const askCoach = (text: string) => {
+    setCoachPrompt({ id: Date.now(), text });
+    setOverlay(null);
+    setTab("coach");
+  };
 
   const closeOverlay = () => setOverlay(null);
   const goTab = (t: TabId) => {
@@ -87,6 +96,7 @@ function MainApp({ startOnPlan }: { startOnPlan: boolean }) {
         onEditPlan={() => setOverlay({ type: "plan" })}
         onOpenSettings={() => setOverlay({ type: "settings" })}
         onChooseWorkout={() => setTab("train")}
+        onAskCoach={askCoach}
       />
     );
   } else if (tab === "train") {
@@ -101,9 +111,9 @@ function MainApp({ startOnPlan }: { startOnPlan: boolean }) {
   } else if (tab === "progress") {
     content = <Progress />;
   } else if (tab === "eat") {
-    content = <ComingSoon title="Eat" blurb="Track calories and protein, with Coach keeping an eye on carbs and fat. Coming after training and Coach." />;
+    content = <Eat onAskCoach={askCoach} />;
   } else {
-    content = <ComingSoon title="Coach" blurb="Coach will spot stalled lifts and missed workouts, and can suggest plan changes for you to approve." />;
+    content = <Coach autoSend={coachPrompt} onAutoSent={() => setCoachPrompt(null)} />;
   }
 
   const hideTabs = overlay?.type === "library";

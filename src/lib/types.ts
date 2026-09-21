@@ -119,3 +119,72 @@ export function todayISO(): string {
 export function weekdayIndex(d: Date = new Date()): number {
   return (d.getDay() + 6) % 7;
 }
+
+// ── Eat and Coach ────────────────────────────────────────────────────────────
+
+export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
+export const MEALS: { id: Meal; label: string }[] = [
+  { id: "breakfast", label: "Breakfast" },
+  { id: "lunch", label: "Lunch" },
+  { id: "dinner", label: "Dinner" },
+  { id: "snack", label: "Snacks" }
+];
+
+export type FoodState = "raw" | "cooked" | "unknown";
+
+/** One thing eaten. The numbers are totals for the amount eaten, saved at the time. */
+export interface FoodEntry {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  meal: Meal;
+  name: string;
+  brand: string | null;
+  fdc_id: number | null;
+  grams: number | null;
+  state: FoodState;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+/** A food found in the USDA database (values per 100 g). */
+export interface FoodHit {
+  fdcId: number;
+  name: string;
+  brand: string | null;
+  dataType: string;
+  state: FoodState;
+  per100g: { calories: number; protein: number; carbs: number; fat: number };
+  servingG: number | null;
+  servingText: string | null;
+}
+
+export type Change =
+  | { op: "set_target"; workout: string; exercise: string; sets?: number; reps?: number; seconds?: number }
+  | { op: "add_exercise"; workout: string; exercise: string; sets?: number; reps?: number; seconds?: number }
+  | { op: "remove_exercise"; workout: string; exercise: string }
+  | { op: "set_nutrition"; calories?: number; protein_g?: number }
+  | {
+      op: "replace_plan";
+      workouts: { name: string; exercises: { exercise: string; sets?: number; reps?: number; seconds?: number }[] }[];
+    };
+
+export interface Proposal {
+  title: string;
+  summary: string;
+  changes: Change[];
+}
+
+export type CoachThread = "coach" | "plan_setup";
+
+export interface CoachMessage {
+  id: string;
+  thread: CoachThread;
+  role: "user" | "coach";
+  content: string;
+  proposal: Proposal | null;
+  proposal_status: "pending" | "applied" | "dismissed" | null;
+  created_at: string;
+}

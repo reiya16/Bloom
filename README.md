@@ -4,7 +4,7 @@ Training and nutrition, coached to your goals. A mobile-first web app (installab
 home screen) built with React + TypeScript + Vite + Tailwind, backed by Supabase, deployed
 to GitHub Pages.
 
-## What's in this version (v0.4)
+## What's in this version (v0.5)
 
 - Sign in with email + password, with a Show / Hide button on password boxes (each person gets their own private data)
 - First-time setup: goal, where you train, optional nutrition targets, a suggested plan
@@ -15,8 +15,14 @@ to GitHub Pages.
   delete a set (button or swipe left, with Undo)
 - Progress: per-exercise chart, a flat-for-3-sessions flag, and a History log (by date or by exercise)
 
-Coming next: Coach (stall alerts, plan changes you approve), Eat (calories, protein, carbs, fat),
-Apple Health sync via an iPhone Shortcut.
+- Eat: log food by searching the USDA FoodData Central database (raw or cooked, grams or ounces), by
+  tapping a recent food, or by typing numbers in. Daily calories and protein goals; Coach watches carbs
+  (usual 45-65% of calories) and fat (20-35%) and flags drift
+- Coach: rule-based alerts (stalled lifts, missed workouts, nutrition drift) plus a chat powered by
+  Google Gemini. Coach can suggest plan changes, but nothing changes until you tap Apply
+- "Talk to Coach" during first-time setup: describe your routine and get a draft plan to approve
+
+Coming next: Apple Health sync via an iPhone Shortcut.
 
 ## Supabase setup
 
@@ -27,6 +33,21 @@ Apple Health sync via an iPhone Shortcut.
 4. **Authentication → URL Configuration**: set **Site URL** and add a **Redirect URL** of
    `https://<your-github-username>.github.io/gym-tracker-v2/`.
 5. **Authentication → Sign In / Providers**: Email is on by default.
+
+### Coach and Eat (server functions)
+
+Run `supabase/migrations/0003_coach_and_eat.sql` in the SQL Editor (it only adds two tables).
+
+Then create two Edge Functions (**Edge Functions -> Deploy a new function -> Via Editor**), pasting in the code
+from `supabase/functions/<name>/index.ts`:
+
+| Function name | Needs secret |
+|---|---|
+| `food-search` | `USDA_API_KEY` (free: fdc.nal.usda.gov/api-key-signup) |
+| `coach` | `GEMINI_API_KEY` (free: aistudio.google.com/app/apikey), optional `GEMINI_MODEL` |
+
+Add secrets under **Edge Functions -> Secrets**. `GEMINI_MODEL` defaults to `gemini-flash-latest`, which always
+points at Google's current Flash model, so it survives model retirements.
 
 ## Deploy (GitHub Pages)
 
@@ -48,4 +69,4 @@ npm run typecheck            # optional type check
 - Weights are stored in kg and shown in kg or lb per person's choice.
 - Removing an exercise from a plan archives it (history is kept), it is never hard-deleted.
 - `supabase/functions/ai-coach` is the old Lift Log coach function. It is not used by this version
-  and will be replaced when Coach is built.
+  (replaced by `coach`) and can be deleted from Supabase.
